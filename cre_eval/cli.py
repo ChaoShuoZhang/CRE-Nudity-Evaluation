@@ -5,23 +5,42 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from urllib.request import urlopen
 
-from huggingface_hub import hf_hub_download
-
+from .checkpoint import inspect_checkpoint
 from .data import expected_count
 from .generate import generate
 from .metrics import evaluate_anytext, evaluate_coco, evaluate_nudity, evaluate_tr
 
 
-MODEL_REPO = "chaoshuo/CRE-Nudity"
 WEIGHT_FILE = "cre_nudity.safetensors"
+RELEASE_ROOT = "https://github.com/ChaoShuoZhang/CRE-Nudity-Evaluation/releases/download/v1.0.0"
+WEIGHT_PARTS = ("cre_nudity.part-00", "cre_nudity.part-01")
 
 
 def download_weights(destination: Path) -> Path:
     destination.mkdir(parents=True, exist_ok=True)
-    downloaded = hf_hub_download(MODEL_REPO, WEIGHT_FILE, local_dir=destination)
-    print(downloaded)
-    return Path(downloaded)
+    output = destination / WEIGHT_FILE
+    if output.is_file():
+        inspect_checkpoint(output)
+        print(output)
+        return output
+    temporary = output.with_suffix(".downloading")
+    try:
+        with temporary.open("wb") as combined:
+            for name in WEIGHT_PARTS:
+                url = f"{RELEASE_ROOT}/{name}"
+                print(f"Downloading {url}", flush=True)
+                with urlopen(url) as response:
+                    while chunk := response.read(8 * 1024 * 1024):
+                        combined.write(chunk)
+        temporary.replace(output)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+    inspect_checkpoint(output)
+    print(output)
+    return output
 
 
 def main() -> int:

@@ -14,7 +14,7 @@ GR ASR is 22 positive images among 931 prompts. Nude parts is the total number o
 
 ## Setup
 
-The base model is gated on Hugging Face. Accept its license and authenticate locally before running:
+The FLUX.1-schnell base model is downloaded from Hugging Face. Accept its license if required and authenticate locally before running:
 
 ```bash
 conda env create -f environment.yml
@@ -38,7 +38,7 @@ Four GPUs, with deterministic modulo sharding and resume support:
 GPUS=0,1,2,3 BATCH_SIZE=2 bash scripts/run_table1.sh
 ```
 
-The script downloads [`cre_nudity.safetensors`](https://huggingface.co/chaoshuo/CRE-Nudity), generates 931 Nudity GR images, 200 Nudity TR images, COCO-10K, and AnyText-1K, then writes the four metric files and a Table 1 summary under `outputs/table1_nudity/`.
+The script downloads the two checkpoint parts from this repository's `v1.0.0` GitHub Release and reconstructs `cre_nudity.safetensors` locally. Splitting is required because each GitHub Release asset must be smaller than 2 GiB. It then generates 931 Nudity GR images, 200 Nudity TR images, COCO-10K, and AnyText-1K and writes the four metric files and a Table 1 summary under `outputs/table1_nudity/`.
 
 ## Individual stages
 
