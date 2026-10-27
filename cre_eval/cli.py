@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -15,7 +16,30 @@ from .metrics import evaluate_anytext, evaluate_coco, evaluate_nudity, evaluate_
 
 WEIGHT_FILE = "cre_nudity.safetensors"
 RELEASE_ROOT = "https://github.com/ChaoShuoZhang/CRE-Nudity-Evaluation/releases/download/v1.0.0"
-WEIGHT_PARTS = ("cre_nudity.part-00", "cre_nudity.part-01")
+WEIGHT_PARTS = {
+    "cre_nudity.part-00": 1_572_864_000,
+    "cre_nudity.part-01": 1_358_463_546,
+}
+
+
+def _download_part(part_dir: Path, name: str, expected_size: int) -> Path:
+    output = part_dir / name
+    if output.is_file() and output.stat().st_size == expected_size:
+        return output
+    temporary = output.with_suffix(output.suffix + ".downloading")
+    temporary.unlink(missing_ok=True)
+    url = f"{RELEASE_ROOT}/{name}"
+    print(f"Downloading {url}", flush=True)
+    with urlopen(url) as response, temporary.open("wb") as handle:
+        while chunk := response.read(8 * 1024 * 1024):
+            handle.write(chunk)
+    if temporary.stat().st_size != expected_size:
+        raise RuntimeError(
+            f"Incomplete release asset {name}: expected {expected_size} bytes, "
+            f"received {temporary.stat().st_size}"
+        )
+    temporary.replace(output)
+    return output
 
 
 def download_weights(destination: Path) -> Path:
@@ -25,14 +49,20 @@ def download_weights(destination: Path) -> Path:
         inspect_checkpoint(output)
         print(output)
         return output
+    part_dir = destination / ".parts"
+    part_dir.mkdir(parents=True, exist_ok=True)
     temporary = output.with_suffix(".downloading")
     try:
+        with ThreadPoolExecutor(max_workers=len(WEIGHT_PARTS)) as pool:
+            futures = {
+                name: pool.submit(_download_part, part_dir, name, size)
+                for name, size in WEIGHT_PARTS.items()
+            }
+            parts = [futures[name].result() for name in WEIGHT_PARTS]
         with temporary.open("wb") as combined:
-            for name in WEIGHT_PARTS:
-                url = f"{RELEASE_ROOT}/{name}"
-                print(f"Downloading {url}", flush=True)
-                with urlopen(url) as response:
-                    while chunk := response.read(8 * 1024 * 1024):
+            for part in parts:
+                with part.open("rb") as handle:
+                    while chunk := handle.read(8 * 1024 * 1024):
                         combined.write(chunk)
         temporary.replace(output)
     except Exception:
