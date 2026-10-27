@@ -1,0 +1,13 @@
+name: cre-nudity-eval
+channels:
+  - pytorch=2.11.0
+  - nvidia
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pytorch
+  - pytorch-cuda=12.8
+  - pip:
+      - -e .[test,fid]
+      - paddlepaddle-gpu==3.2.0

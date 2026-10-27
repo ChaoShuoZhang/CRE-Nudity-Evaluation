@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cre-nudity-eval"
+version = "1.0.0"
+description = "Evaluation-only reproduction package for the CRE Nudity result on FLUX.1-schnell"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+  "diffusers==0.38.0",
+  "huggingface-hub==1.14.0",
+  "nudenet==3.4.2",
+  "numpy==1.26.4",
+  "open-clip-torch==2.24.0",
+  "paddleocr==3.7.0",
+  "paddlex==3.7.2",
+  "Pillow==12.2.0",
+  "safetensors>=0.7,<0.9",
+  "scipy>=1.15,<2",
+  "torch==2.11.0",
+  "transformers==5.8.0",
+  "tqdm==4.67.3",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+fid = ["T2IBenchmark @ git+https://github.com/boomb0om/text2image-benchmark.git@532229f02f87069bc93bf616d7056cda9beb3457"]
+
+[project.scripts]
+cre-eval = "cre_eval.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["cre_eval*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
